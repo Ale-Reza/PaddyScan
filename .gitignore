@@ -44,3 +44,13 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 assets/.env
+backend/
+backend old files/
+.claude/
+diagrams/
+*.docx
+*.pdf
+generate_chapter4.py
+generate_doc.py
+plantuml.jar
+.env
