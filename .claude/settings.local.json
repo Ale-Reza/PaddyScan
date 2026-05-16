@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter --version)",
+      "Bash(flutter config:*)",
+      "Read(//c/Users/HP/AppData/Local/**)",
+      "Read(//c/src/flutter/bin/cache/artifacts/**)",
+      "Read(//c//**)"
+    ]
+  }
+}

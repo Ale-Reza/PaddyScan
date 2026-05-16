@@ -1,0 +1,182 @@
+@startuml PaddyScan_Activity
+
+skinparam defaultFontSize 15
+skinparam defaultFontStyle bold
+skinparam defaultFontName Arial
+skinparam dpi 200
+
+skinparam ActivityFontSize 15
+skinparam ActivityFontStyle bold
+skinparam ActivityFontColor #1A1A1A
+skinparam ActivityBackgroundColor #FFD700
+skinparam ActivityBorderColor #B8860B
+skinparam ActivityBorderThickness 2
+
+skinparam ActivityDiamondFontSize 14
+skinparam ActivityDiamondFontStyle bold
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+skinparam ActivityDiamondBorderColor #F57F17
+skinparam ActivityDiamondBorderThickness 2
+
+skinparam ArrowColor #E65100
+skinparam ArrowThickness 2
+skinparam ArrowFontSize 14
+skinparam ArrowFontStyle bold
+skinparam ArrowFontColor #B71C1C
+
+skinparam PartitionFontSize 17
+skinparam PartitionFontStyle bold
+skinparam PartitionBorderColor #F57F17
+skinparam PartitionBorderThickness 2
+skinparam PartitionBackgroundColor #FFF8E1
+
+skinparam NoteBackgroundColor #FFECB3
+skinparam NoteBorderColor #FFB300
+skinparam NoteFontSize 14
+
+skinparam BackgroundColor #FFFDE7
+skinparam RoundCorner 10
+skinparam Shadowing true
+
+title <color:#B8860B><size:28>PaddyScan</size></color>  <size:20>Activity Diagram — Core Application Flow</size>
+
+|#FFE082|<&person> USER|
+|#FFCA28|<&phone> APP|
+|#FFA000|<&cloud-upload> FLASK SERVER|
+|#FF8F00|<&comment-square> AI SERVICE|
+
+|<&phone> APP|
+start
+
+:<&phone> Launch PaddyScan
+Load settings from SharedPrefs;
+
+:<&wifi> Check Server (GET /health);
+
+|<&cloud-upload> FLASK SERVER|
+:Respond to health check;
+
+|<&phone> APP|
+if (Server reachable?) then (<color:#2E7D32>YES</color>)
+  :<color:#2E7D32>Show GREEN status badge</color>;
+else (<color:#C62828>NO</color>)
+  :<color:#C62828>Show RED offline badge</color>;
+endif
+
+:Navigate to Main Shell (3 Tabs);
+
+|<&person> USER|
+:<&camera> Select Image Source
+Camera  or  Gallery;
+
+|<&phone> APP|
+:Open ImagePicker
+Compress → Encode Base64
+Display preview;
+
+|<&person> USER|
+:<&task> Select Analysis Mode;
+
+|<&phone> APP|
+if (Which mode?) then (Classify)
+  :<&check> CLASSIFY
+Identify disease only;
+elseif (Detect) then
+  :<&target> DETECT
+Locate affected areas;
+else (Diagnose)
+  :<&magnifying-glass> DIAGNOSE
+Full analysis + annotation;
+endif
+
+|<&person> USER|
+:Tap "START ANALYSIS";
+
+|<&phone> APP|
+:Show loading overlay (scanning animation);
+:<&cloud-upload> POST /api/{mode} { image: base64 };
+
+|<&cloud-upload> FLASK SERVER|
+:Run ML Model
+(CNN Classifier / Object Detector);
+
+if (Processing success?) then (<color:#2E7D32>YES</color>)
+  :Return PredictionResult JSON;
+else (<color:#C62828>ERROR</color>)
+  :<color:#C62828>Return error response</color>;
+endif
+
+|<&phone> APP|
+if (API successful?) then (<color:#2E7D32>YES</color>)
+
+  :<&hard-drive> Save to History (SharedPrefs)
+Save image to file system;
+
+  :<&bar-chart> Show Result Page
+Disease · Confidence · Boxes · Stats · Top-3;
+
+  |<&comment-square> AI SERVICE|
+  if (AI Diagnosis enabled?) then (<color:#2E7D32>YES</color>)
+    if (Gemini available?) then (<color:#2E7D32>YES</color>)
+      :Stream via Google Gemini;
+    elseif (OpenRouter responds?) then (<color:#2E7D32>YES</color>)
+      :Stream via OpenRouter model;
+    else (<color:#C62828>NO</color>)
+      :Return hardcoded disease info;
+    endif
+
+    |<&phone> APP|
+    :Animate treatment text word-by-word;
+
+  else (<color:#E65100>NO</color>)
+    |<&phone> APP|
+    :Show local disease database info;
+  endif
+
+else (<color:#C62828>FAILED</color>)
+  :<color:#C62828>Show error SnackBar</color>;
+endif
+
+|<&person> USER|
+if (Next action?) then (New Scan)
+  |<&phone> APP|
+  :Reset state → Back to Home;
+elseif (History) then
+  :<&list> Load Scan History
+Read from SharedPrefs;
+
+  |<&person> USER|
+  if (History action?) then (View)
+    |<&phone> APP|
+    :Open previous Result Page;
+  elseif (Delete) then
+    |<&phone> APP|
+    :Remove entry + image file;
+  else (Clear All)
+    |<&phone> APP|
+    :Confirm → Delete all history;
+  endif
+
+else (Settings)
+  |<&phone> APP|
+  :<&cog> Show Settings Page;
+
+  |<&person> USER|
+  if (Settings action?) then (Server IP)
+    |<&phone> APP|
+    :Test connection → Save IP;
+  elseif (Theme) then
+    |<&phone> APP|
+    :Toggle Dark / Light → Rebuild;
+  elseif (Language) then
+    |<&phone> APP|
+    :Switch EN / UR → Rebuild;
+  else (AI Settings)
+    |<&phone> APP|
+    :Update AI model / toggle → Save;
+  endif
+endif
+
+stop
+
+@enduml
