@@ -103,15 +103,21 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         status: PredictionStatus.loading, errorMessage: () => null));
 
     try {
-      // 1. Get result from API
+      // 1. Validate image is a rice plant before running the full model
+      final isRice = await apiService.validateImage(imageData.base64!);
+      if (!isRice) {
+        emit(state.copyWith(status: PredictionStatus.invalidImage));
+        return;
+      }
+
+      // 2. Get result from API
       final result =
           await apiService.uploadImage(imageData.base64!, state.selectedMode);
 
-      // 2. Prepare image bytes for Isar
-      // We decode the base64 string back to bytes for storage
+      // 3. Prepare image bytes for Isar
       final Uint8List imageBytes = base64Decode(imageData.base64!);
 
-      // 3. Trigger the Isar save via Repository
+      // 4. Trigger the Isar save via Repository
       // This is a "fire and forget" or await depending on your preference
       await homeRepository.processAndSaveResult(result, imageBytes);
 

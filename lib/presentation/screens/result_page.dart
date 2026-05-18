@@ -545,6 +545,7 @@ $closing''';
     );
   }
 
+
   Widget _buildMainResultCard() {
     final l10n = AppLocalizations.of(context);
     final tc = ThemeColors.of(context);

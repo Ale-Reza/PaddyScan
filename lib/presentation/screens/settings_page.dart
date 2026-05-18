@@ -22,10 +22,12 @@ class _SettingsPageState extends State<SettingsPage>
   bool _darkModeEnabled = true;
   bool _urduEnabled = false;
   bool _aiDiagnosisEnabled = true;
-  bool _highQualityImage = true;
   String _selectedModel = 'deepseek/deepseek-chat:free';
   bool _isCheckingServer = false;
   String _serverStatus = ''; // '', 'online', 'offline'
+  bool _useLocalServer = false;
+  final TextEditingController _serverIpController =
+      TextEditingController(text: '192.168.100.101');
   SharedPreferences? _prefs;
 
   late AnimationController _animController;
@@ -55,6 +57,7 @@ class _SettingsPageState extends State<SettingsPage>
   @override
   void dispose() {
     _animController.dispose();
+    _serverIpController.dispose();
     super.dispose();
   }
 
@@ -64,8 +67,10 @@ class _SettingsPageState extends State<SettingsPage>
       _darkModeEnabled = _prefs!.getBool('dark_mode') ?? true;
       _urduEnabled = _prefs!.getBool('urdu_enabled') ?? false;
       _aiDiagnosisEnabled = _prefs!.getBool('ai_diagnosis') ?? true;
-      _highQualityImage = _prefs!.getBool('high_quality_image') ?? true;
       _selectedModel = _prefs!.getString('ai_model') ?? 'deepseek/deepseek-chat:free';
+      _useLocalServer = _prefs!.getBool('use_local_server') ?? false;
+      _serverIpController.text =
+          _prefs!.getString('server_ip') ?? '192.168.100.101';
     });
   }
 
@@ -82,8 +87,11 @@ class _SettingsPageState extends State<SettingsPage>
       _isCheckingServer = true;
       _serverStatus = '';
     });
+    final checkUrl = _useLocalServer
+        ? 'http://${_serverIpController.text.trim()}:7860/health'
+        : '$_hostedUrl/health';
     try {
-      final uri = Uri.parse('$_hostedUrl/health');
+      final uri = Uri.parse(checkUrl);
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       setState(() {
         _serverStatus = response.statusCode == 200 ? 'online' : 'offline';
@@ -127,7 +135,6 @@ class _SettingsPageState extends State<SettingsPage>
 
       setState(() {
         _aiDiagnosisEnabled = true;
-        _highQualityImage = true;
         _selectedModel = 'deepseek/deepseek-chat:free';
       });
 
@@ -260,29 +267,6 @@ class _SettingsPageState extends State<SettingsPage>
                       ),
                       const SizedBox(height: 16),
 
-                      // ── Scanning ───────────────────────────────────────
-                      _buildSection(
-                        tc: tc,
-                        icon: Icons.camera_alt,
-                        title: l10n.scanning,
-                        color: const Color(0xFF00838F),
-                        children: [
-                          _buildSwitchTile(
-                            tc: tc,
-                            icon: Icons.hd,
-                            iconColor: const Color(0xFF00838F),
-                            title: l10n.highQuality,
-                            subtitle: l10n.highQualitySubtitle,
-                            value: _highQualityImage,
-                            onChanged: (v) {
-                              setState(() => _highQualityImage = v);
-                              _saveBool('high_quality_image', v);
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
                       // ── Storage ────────────────────────────────────────
                       _buildSection(
                         tc: tc,
@@ -336,7 +320,7 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  // ── Hosted Server Status Widget ──────────────────────────────────────────
+  // ── Server Status Widget ─────────────────────────────────────────────────
   Widget _buildHostedServerSection(ThemeColors tc) {
     Color statusColor;
     IconData statusIcon;
@@ -360,21 +344,34 @@ class _SettingsPageState extends State<SettingsPage>
       statusText = 'Tap to check';
     }
 
+    final displayUrl = _useLocalServer
+        ? 'http://${_serverIpController.text.trim()}:7860'
+        : _hostedUrl.replaceFirst('https://', '');
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Local / Hosted toggle ────────────────────────────────────────
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: palette.AppColors.primary.withValues(alpha: 0.1),
+                  color: (_useLocalServer
+                          ? Colors.orange
+                          : palette.AppColors.primary)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.cloud_done,
-                    color: palette.AppColors.primary, size: 20),
+                child: Icon(
+                  _useLocalServer ? Icons.computer : Icons.cloud_done,
+                  color: _useLocalServer
+                      ? Colors.orange
+                      : palette.AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -382,7 +379,7 @@ class _SettingsPageState extends State<SettingsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PaddyScan Cloud',
+                      _useLocalServer ? 'Local Server' : 'PaddyScan Cloud',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -391,78 +388,135 @@ class _SettingsPageState extends State<SettingsPage>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'hf.space · Hugging Face',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: tc.textSecondary,
-                      ),
+                      _useLocalServer
+                          ? 'Your local machine · port 7860'
+                          : 'hf.space · Hugging Face',
+                      style: TextStyle(fontSize: 12, color: tc.textSecondary),
                     ),
                   ],
                 ),
               ),
-              // Status badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _isCheckingServer
-                        ? SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: statusColor,
-                            ),
-                          )
-                        : Icon(statusIcon, size: 12, color: statusColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      statusText,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: statusColor,
-                      ),
-                    ),
-                  ],
-                ),
+              Switch(
+                value: _useLocalServer,
+                onChanged: (v) {
+                  setState(() {
+                    _useLocalServer = v;
+                    _serverStatus = '';
+                  });
+                  _saveBool('use_local_server', v);
+                },
+                activeTrackColor: Colors.orange.withValues(alpha: 0.4),
+                activeThumbColor: Colors.orange,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // URL display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: tc.inputFill,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.link, size: 14, color: tc.textSecondary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _hostedUrl.replaceFirst('https://', ''),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: tc.textSecondary,
-                      fontFamily: 'monospace',
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+
+          // ── IP field (only when local is active) ─────────────────────────
+          if (_useLocalServer) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _serverIpController,
+              keyboardType: TextInputType.number,
+              style: TextStyle(fontSize: 14, color: tc.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Server IP address',
+                labelStyle: TextStyle(color: tc.textSecondary, fontSize: 13),
+                prefixIcon:
+                    Icon(Icons.lan_outlined, color: Colors.orange, size: 20),
+                suffixText: ':7860',
+                suffixStyle:
+                    TextStyle(color: tc.textSecondary, fontSize: 13),
+                filled: true,
+                fillColor: tc.inputFill,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-              ],
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: Colors.orange, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
+              ),
+              onChanged: (v) {
+                _saveString('server_ip', v.trim());
+                setState(() => _serverStatus = '');
+              },
+            ),
+          ],
+
+          const SizedBox(height: 12),
+
+          // ── Active URL display ───────────────────────────────────────────
+          InkWell(
+            onTap: _isCheckingServer ? null : _checkServerStatus,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: tc.inputFill,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.link, size: 14, color: tc.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      displayUrl,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: tc.textSecondary,
+                        fontFamily: 'monospace',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _isCheckingServer
+                            ? SizedBox(
+                                width: 10,
+                                height: 10,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: statusColor,
+                                ),
+                              )
+                            : Icon(statusIcon,
+                                size: 10, color: statusColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+
           const SizedBox(height: 12),
-          // Check status button
+
+          // ── Check button ─────────────────────────────────────────────────
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -470,8 +524,13 @@ class _SettingsPageState extends State<SettingsPage>
               icon: const Icon(Icons.wifi_find, size: 18),
               label: const Text('Check Server Status'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: palette.AppColors.primary,
-                side: const BorderSide(color: palette.AppColors.primary),
+                foregroundColor: _useLocalServer
+                    ? Colors.orange
+                    : palette.AppColors.primary,
+                side: BorderSide(
+                    color: _useLocalServer
+                        ? Colors.orange
+                        : palette.AppColors.primary),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -752,12 +811,13 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   void _showDiseaseGlossary(AppLocalizations l10n, ThemeColors tc) {
+    final isUrdu = Localizations.localeOf(context).languageCode == 'ur';
     final diseases = [
-      {'name': 'Bacterial Leaf Blight', 'icon': '🦠'},
-      {'name': 'Brown Spot', 'icon': '🟤'},
-      {'name': 'Leaf Blast', 'icon': '💨'},
-      {'name': 'Leaf Scald', 'icon': '🔥'},
-      {'name': 'Healthy', 'icon': '✅'},
+      {'name': 'Bacterial Leaf Blight', 'nameUrdu': 'بیکٹیریل پتی جھلساؤ', 'icon': '🦠'},
+      {'name': 'Brown Spot',            'nameUrdu': 'بھورے دھبے',           'icon': '🟤'},
+      {'name': 'Leaf Blast',            'nameUrdu': 'پتی جھلس',             'icon': '💨'},
+      {'name': 'Leaf Scald',            'nameUrdu': 'پتی جھلساؤ',           'icon': '🔥'},
+      {'name': 'Healthy',               'nameUrdu': 'صحت مند',              'icon': '✅'},
     ];
 
     showModalBottomSheet(
@@ -798,19 +858,26 @@ class _SettingsPageState extends State<SettingsPage>
                 itemCount: diseases.length,
                 separatorBuilder: (_, __) =>
                     Divider(height: 1, color: tc.divider),
-                itemBuilder: (_, i) => ListTile(
-                  leading: Text(diseases[i]['icon']!,
-                      style: const TextStyle(fontSize: 24)),
-                  title: Text(diseases[i]['name']!,
-                      style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                          color: tc.textPrimary)),
-                  trailing:
-                      Icon(Icons.chevron_right, color: tc.textSecondary),
-                  onTap: () => _showDiseaseDetail(
-                      diseases[i]['name']!, diseases[i]['icon']!, tc),
-                ),
+                itemBuilder: (_, i) {
+                  final displayName = isUrdu
+                      ? diseases[i]['nameUrdu']!
+                      : diseases[i]['name']!;
+                  return ListTile(
+                    leading: Text(diseases[i]['icon']!,
+                        style: const TextStyle(fontSize: 24)),
+                    title: Text(displayName,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                            color: tc.textPrimary)),
+                    trailing:
+                        Icon(Icons.chevron_right, color: tc.textSecondary),
+                    onTap: () => _showDiseaseDetail(
+                        diseases[i]['name']!, diseases[i]['icon']!, tc,
+                        displayName: displayName,
+                        lang: isUrdu ? 'ur' : 'en'),
+                  );
+                },
               ),
             ),
           ],
@@ -819,8 +886,10 @@ class _SettingsPageState extends State<SettingsPage>
     );
   }
 
-  void _showDiseaseDetail(String name, String icon, ThemeColors tc) {
-    final definition = DiseaseInfo.getDefinition(name);
+  void _showDiseaseDetail(String name, String icon, ThemeColors tc,
+      {String lang = 'en', String? displayName}) {
+    final definition = DiseaseInfo.getDefinition(name, lang: lang);
+    final title = displayName ?? name;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -852,7 +921,7 @@ class _SettingsPageState extends State<SettingsPage>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    name,
+                    title,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

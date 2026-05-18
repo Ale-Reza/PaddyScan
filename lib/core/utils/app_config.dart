@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AppConfig {
   static const String _ipKey = 'server_ip';
-  static const String _defaultIp = '192.168.1.101';
+  static const String _defaultIp = '192.168.100.101';
 
   // Get full base URL
   static Future<String> getBaseUrl() async {

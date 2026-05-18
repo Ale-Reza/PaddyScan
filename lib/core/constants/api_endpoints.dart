@@ -6,8 +6,8 @@ class ApiEndpoints {
   static const String _hostedUrl = 'https://HAFALI-paddyscan-backend.hf.space';
 
   // 🔧 Local fallback for development
-  static const String _defaultIp = '192.168.1.101';
-  static const String _defaultPort = '5000';
+  static const String _defaultIp = '192.168.100.101';
+  static const String _defaultPort = '7860';
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,6 +31,7 @@ class ApiEndpoints {
   // Endpoints
   static const String health = '/health';
   static const String modelInfo = '/model-info';
+  static const String validate = '/api/validate';
   static const String classify = '/api/classify';
   static const String detect = '/api/detect';
   static const String diagnose = '/api/diagnose';

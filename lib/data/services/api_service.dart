@@ -53,6 +53,24 @@ class ApiService {
     }
   }
 
+  Future<bool> validateImage(String base64Image) async {
+    await _initDio();
+    try {
+      final String clean =
+          base64Image.contains(',') ? base64Image.split(',').last : base64Image;
+      final response = await _dio.post(
+        ApiEndpoints.validate,
+        data: {'image': clean},
+      );
+      if (response.statusCode == 200) {
+        return response.data['is_rice'] == true;
+      }
+      return true; // fail open on unexpected status
+    } catch (_) {
+      return true; // fail open — let main analysis proceed on network error
+    }
+  }
+
   Future<bool> checkHealth() async {
     await _initDio(); // 👈 fresh baseUrl here too
     try {

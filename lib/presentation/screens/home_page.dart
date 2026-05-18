@@ -78,6 +78,9 @@ class _HomePageState extends State<HomePage>
                 });
                 context.read<HomeBloc>().add(const MarkAsNavigatedEvent());
               }
+              if (state.status == PredictionStatus.invalidImage) {
+                _showInvalidImageSheet(context);
+              }
               if (state.status.isError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -636,6 +639,73 @@ class _HomePageState extends State<HomePage>
                 context.read<HomeBloc>().add(const CheckServerConnection()),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showInvalidImageSheet(BuildContext context) {
+    final isUrdu = Localizations.localeOf(context).languageCode == 'ur';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Icon(Icons.no_photography_outlined,
+                size: 56, color: Colors.orangeAccent),
+            const SizedBox(height: 16),
+            Text(
+              isUrdu ? 'چاول کا پتہ نہیں پہچانا گیا' : 'Not a Rice Plant',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              isUrdu
+                  ? 'یہ تصویر چاول کے پتے کی نہیں لگتی۔ براہ کرم چاول کے پتے کی واضح اور قریبی تصویر لیں۔'
+                  : 'This image does not appear to be a rice leaf. Please retake a clear, close-up photo of the rice plant.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.read<HomeBloc>().add(const ResetResultsOnly());
+                },
+                icon: const Icon(Icons.camera_alt),
+                label: Text(isUrdu ? 'دوبارہ تصویر لیں' : 'Retake Photo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

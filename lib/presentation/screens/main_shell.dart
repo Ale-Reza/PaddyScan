@@ -4,7 +4,7 @@ import 'package:paddy_scan/core/constants/theme_colors.dart';
 import 'package:paddy_scan/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: unused_import
-import 'home_page.dart';    // original
+import 'home_page.dart'; // original
 import 'home_page_v3.dart' as v3; // Option 3: viewfinder + dot grid + brackets
 import 'history_page.dart';
 import '../screens/settings_page.dart';

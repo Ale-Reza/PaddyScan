@@ -5,7 +5,7 @@ import 'package:paddy_scan/core/constants/app_colors.dart';
 
 enum AnalysisMode { classify, detect, diagnose }
 
-enum PredictionStatus { initial, loading, success, error }
+enum PredictionStatus { initial, loading, success, error, invalidImage }
 
 enum DetectionSeverity { minimal, mild, moderate, severe }
 
