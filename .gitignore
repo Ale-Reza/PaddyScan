@@ -54,3 +54,10 @@ generate_chapter4.py
 generate_doc.py
 plantuml.jar
 .env
+docs/assets/assets/.env
+linux/
+macos/
+windows/
+ios/
+paddyscan.iml
+android/build/
