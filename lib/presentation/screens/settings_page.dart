@@ -22,7 +22,6 @@ class _SettingsPageState extends State<SettingsPage>
   bool _darkModeEnabled = true;
   bool _urduEnabled = false;
   bool _aiDiagnosisEnabled = true;
-  String _selectedModel = 'deepseek/deepseek-chat:free';
   bool _isCheckingServer = false;
   String _serverStatus = ''; // '', 'online', 'offline'
   bool _useLocalServer = false;
@@ -32,15 +31,6 @@ class _SettingsPageState extends State<SettingsPage>
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
-
-  static const List<Map<String, String>> _freeModels = [
-    {'label': 'DeepSeek Chat (Best Quality)', 'value': 'deepseek/deepseek-chat:free'},
-    {'label': 'Llama 3.1 8B', 'value': 'meta-llama/llama-3.1-8b-instruct:free'},
-    {'label': 'Mistral 7B', 'value': 'mistralai/mistral-7b-instruct:free'},
-    {'label': 'Google Gemma 2 9B', 'value': 'google/gemma-2-9b-it:free'},
-    {'label': 'Llama 3.2 3B (Fastest)', 'value': 'meta-llama/llama-3.2-3b-instruct:free'},
-    {'label': 'Microsoft Phi-3 Mini', 'value': 'microsoft/phi-3-mini-128k-instruct:free'},
-  ];
 
   @override
   void initState() {
@@ -67,7 +57,6 @@ class _SettingsPageState extends State<SettingsPage>
       _darkModeEnabled = _prefs!.getBool('dark_mode') ?? true;
       _urduEnabled = _prefs!.getBool('urdu_enabled') ?? false;
       _aiDiagnosisEnabled = _prefs!.getBool('ai_diagnosis') ?? true;
-      _selectedModel = _prefs!.getString('ai_model') ?? 'deepseek/deepseek-chat:free';
       _useLocalServer = _prefs!.getBool('use_local_server') ?? false;
       _serverIpController.text =
           _prefs!.getString('server_ip') ?? '192.168.100.101';
@@ -135,7 +124,6 @@ class _SettingsPageState extends State<SettingsPage>
 
       setState(() {
         _aiDiagnosisEnabled = true;
-        _selectedModel = 'deepseek/deepseek-chat:free';
       });
 
       if (mounted) {
@@ -627,6 +615,18 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   Widget _buildModelSelector(AppLocalizations l10n, ThemeColors tc) {
+    // Models in the exact order the app tries them — read-only, not user-configurable.
+    const models = [
+      {'label': 'Gemini 2.0 Flash',       'tag': 'Primary',  'tagColor': 0xFF1B5E20},
+      {'label': 'Gemini 2.0 Flash Lite',  'tag': 'Fallback', 'tagColor': 0xFF388E3C},
+      {'label': 'DeepSeek Chat',           'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+      {'label': 'Llama 3.1 8B',           'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+      {'label': 'Mistral 7B',             'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+      {'label': 'Google Gemma 2 9B',      'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+      {'label': 'Llama 3.2 3B',           'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+      {'label': 'Microsoft Phi-3 Mini',   'tag': 'Fallback', 'tagColor': 0xFF1565C0},
+    ];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
@@ -649,39 +649,67 @@ class _SettingsPageState extends State<SettingsPage>
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.aiModelSubtitle,
+            'Models are tried in order until one responds.',
             style: TextStyle(fontSize: 12, color: tc.textSecondary),
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
               color: tc.inputFill,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: tc.divider),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _freeModels.any((m) => m['value'] == _selectedModel)
-                    ? _selectedModel
-                    : _freeModels.first['value'],
-                isExpanded: true,
-                dropdownColor: tc.card,
-                icon: const Icon(Icons.expand_more,
-                    color: palette.AppColors.primary),
-                items: _freeModels.map((model) {
-                  return DropdownMenuItem(
-                    value: model['value'],
-                    child: Text(model['label']!,
-                        style:
-                            TextStyle(fontSize: 14, color: tc.textPrimary)),
-                  );
-                }).toList(),
-                onChanged: (v) {
-                  setState(() => _selectedModel = v!);
-                  _saveString('ai_model', v!);
-                },
-              ),
+            child: Column(
+              children: List.generate(models.length, (i) {
+                final m = models[i];
+                final tagColor = Color(m['tagColor'] as int);
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${i + 1}.',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: tc.textSecondary),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              m['label'] as String,
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: tc.textPrimary,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: tagColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              m['tag'] as String,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: tagColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (i < models.length - 1)
+                      Divider(height: 1, color: tc.divider, indent: 16),
+                  ],
+                );
+              }),
             ),
           ),
         ],

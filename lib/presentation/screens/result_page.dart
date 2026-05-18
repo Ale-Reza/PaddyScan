@@ -145,6 +145,9 @@ class _ResultPageState extends State<ResultPage> {
         _isTyping = false;
       });
     } else {
+      // AI unavailable — show info and reflect that honestly in the toggle.
+      // Only flip local state; do NOT write to prefs — the user's setting stays intact.
+      setState(() => _useAI = false);
       _streamContent(DiseaseInfo.getInfo(_result.label, lang: lang));
     }
   }
@@ -245,9 +248,11 @@ class _ResultPageState extends State<ResultPage> {
             _isTyping = false;
           });
       } else {
-        // Both AI providers failed — stream hardcoded fallback in active language
+        // Both AI providers failed — show info and reflect that honestly in the toggle.
+        // Only flip local state; do NOT write to prefs — the user's setting stays intact.
         final fallback = DiseaseInfo.getInfo(_result.label, lang: currentLang);
         aiResult = fallback;
+        if (mounted) setState(() => _useAI = false);
         _streamContent(fallback);
       }
     }

@@ -9,7 +9,7 @@ import '../core/constants/app_theme.dart';
 import 'package:paddy_scan/l10n/app_localizations.dart';
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/home',
+  initialLocation: '/splash',
   debugLogDiagnostics: false,
   errorBuilder: (context, state) => const SplashScreen(),
   redirect: (context, state) {

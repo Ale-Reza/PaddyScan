@@ -137,12 +137,12 @@ class _SplashScreenState extends State<SplashScreen>
     _logoController.forward();
 
     // Start text after logo
-    await Future.delayed(const Duration(milliseconds: 4200));
+    await Future.delayed(const Duration(milliseconds: 3000));
     _textController.forward();
     _progressController.forward();
 
     // Restore system UI before leaving splash
-    await Future.delayed(const Duration(milliseconds: 7000));
+    await Future.delayed(const Duration(milliseconds: 5000));
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
